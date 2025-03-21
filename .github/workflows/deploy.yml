@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v3  # 更新到v3版本
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0
 
       - name: 设置QEMU
         uses: docker/setup-qemu-action@v2
@@ -29,7 +29,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./my_page_frontend
-          file: ./my_page_frontend/Dockerfile  # 明确指定Dockerfile路径
+          file: ./my_page_frontend/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-frontend:latest
 
@@ -37,11 +37,10 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./my_page_backend
-          file: ./my_page_backend/Dockerfile  # 明确指定Dockerfile路径
+          file: ./my_page_backend/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest
 
-  # 部署部分使用不同的SSH动作
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -49,27 +48,18 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v3
 
-      # 设置SSH密钥
-      - name: 设置SSH密钥
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-
-      # 添加EC2主机到known_hosts
-      - name: 添加EC2主机到known_hosts
+      # 创建SSH密钥文件
+      - name: 创建SSH密钥文件
         run: |
           mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      # 将docker-compose.yml复制到EC2
-      - name: 将docker-compose.yml复制到EC2
+      # 创建部署脚本
+      - name: 创建部署脚本
         run: |
-          scp docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
-
-      # 创建并复制部署脚本
-      - name: 创建并复制部署脚本
-        run: |
-          cat > deploy.sh << 'EOF'
+          cat > deploy_remote.sh << 'EOF'
           #!/bin/bash
           # 登录到DockerHub
           echo $1 | docker login -u $2 --password-stdin
@@ -92,10 +82,14 @@ jobs:
           # 启动容器
           docker-compose up -d
           EOF
-          chmod +x deploy.sh
-          scp deploy.sh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
 
-      # 在EC2上执行部署脚本
-      - name: 在EC2上执行部署脚本
+      # 复制文件到EC2
+      - name: 复制文件到EC2
         run: |
-          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "bash ~/deploy.sh '${{ secrets.DOCKERHUB_TOKEN }}' '${{ secrets.DOCKERHUB_USERNAME }}'"
+          scp -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
+          scp -o StrictHostKeyChecking=no deploy_remote.sh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+
+      # 执行远程部署命令
+      - name: 执行远程部署命令
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "chmod +x ~/deploy_remote.sh && ~/deploy_remote.sh '${{ secrets.DOCKERHUB_TOKEN }}' '${{ secrets.DOCKERHUB_USERNAME }}'"
