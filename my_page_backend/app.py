@@ -12,11 +12,11 @@ CORS(app)  # 启用CORS以允许前端访问
 try:
     # 使用认证连接MongoDB
     # 方法1：使用URI字符串方式连接（推荐）
-    # client = MongoClient('mongodb://localhost:27017/', authSource='admin')
+    client = MongoClient('mongodb://localhost:27017/', authSource='admin')
     
     # 如果上面的方式不行，可以尝试以下方式：
     # 方法2：使用用户名和密码参数
-    client = MongoClient('mongodb://localhost:27017/', username='admin', password='password', authSource='admin')
+    # client = MongoClient('mongodb://localhost:27017/', username='admin', password='password', authSource='admin')
     
     # 方法3：如果您知道确切的用户名和密码，可以直接使用
     # client = MongoClient('mongodb://username:password@localhost:27017/admin')
