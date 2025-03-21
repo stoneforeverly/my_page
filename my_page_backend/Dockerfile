@@ -1,5 +1,5 @@
 # 使用Python作为基础镜像
-FROM python:3.7
+FROM python:3.7-alpine
 
 # 安装依赖
 RUN apk add --no-cache \
