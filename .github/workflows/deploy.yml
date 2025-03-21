@@ -41,6 +41,18 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
+      - name: 检出代码
+        uses: actions/checkout@v2
+        
+      - name: 将docker-compose.yml复制到EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "~/my-blog"
+          
       - name: 部署到EC2
         uses: appleboy/ssh-action@master
         with:
@@ -55,46 +67,16 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-blog-frontend:latest
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-blog-backend:latest
             
-            # 停止并删除旧容器（如果存在）
-            docker-compose -f ~/my-blog/docker-compose.yml down || true
-            
             # 确保目录存在
             mkdir -p ~/my-blog
             
-            # 创建或更新docker-compose.yml文件
-            cat > ~/my-blog/docker-compose.yml << 'EOL'
-            version: '3'
-
-            services:
-              frontend:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/my-blog-frontend:latest
-                ports:
-                  - "80:80"
-                depends_on:
-                  - backend
-                restart: always
-
-              backend:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/my-blog-backend:latest
-                ports:
-                  - "5000:5000"
-                depends_on:
-                  - mongodb
-                environment:
-                  - MONGO_URI=mongodb://mongodb:27017/blog_db
-                restart: always
-
-              mongodb:
-                image: mongo:latest
-                ports:
-                  - "27017:27017"
-                volumes:
-                  - mongo-data:/data/db
-                restart: always
-
-            volumes:
-              mongo-data:
-            EOL
+            # 修改docker-compose.yml中的镜像引用
+            cd ~/my-blog
+            sed -i "s|build: ./my_page_frontend|image: ${{ secrets.DOCKERHUB_USERNAME }}/my-blog-frontend:latest|g" docker-compose.yml
+            sed -i "s|build: ./my_page_backend|image: ${{ secrets.DOCKERHUB_USERNAME }}/my-blog-backend:latest|g" docker-compose.yml
+            
+            # 停止并删除旧容器（如果存在）
+            docker-compose down || true
             
             # 启动容器
-            cd ~/my-blog && docker-compose up -d
+            docker-compose up -d
