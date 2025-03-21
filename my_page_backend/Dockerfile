@@ -8,8 +8,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \
+    libssl1.1 \
     libssl-dev \
-    libcrypt-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
