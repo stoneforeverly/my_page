@@ -41,7 +41,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest
 
-  # 部署部分修改
+  # 部署部分使用不同的SSH动作
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -49,16 +49,25 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v3
 
-      - name: 将docker-compose.yml复制到EC2
-        uses: appleboy/scp-action@master
+      # 设置SSH密钥
+      - name: 设置SSH密钥
+        uses: webfactory/ssh-agent@v0.7.0
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml"
-          target: "~/my-page"
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: 创建部署脚本
+      # 添加EC2主机到known_hosts
+      - name: 添加EC2主机到known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      # 将docker-compose.yml复制到EC2
+      - name: 将docker-compose.yml复制到EC2
+        run: |
+          scp docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
+
+      # 创建并复制部署脚本
+      - name: 创建并复制部署脚本
         run: |
           cat > deploy.sh << 'EOF'
           #!/bin/bash
@@ -84,25 +93,9 @@ jobs:
           docker-compose up -d
           EOF
           chmod +x deploy.sh
+          scp deploy.sh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
 
-      - name: 将部署脚本复制到EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "deploy.sh"
-          target: "~"
-
+      # 在EC2上执行部署脚本
       - name: 在EC2上执行部署脚本
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # 安装libcrypt.so.1（如果需要）
-            sudo apt-get update && sudo apt-get install -y libxcrypt-compat || true
-            
-            # 执行部署脚本
-            bash ~/deploy.sh "${{ secrets.DOCKERHUB_TOKEN }}" "${{ secrets.DOCKERHUB_USERNAME }}"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "bash ~/deploy.sh '${{ secrets.DOCKERHUB_TOKEN }}' '${{ secrets.DOCKERHUB_USERNAME }}'"
