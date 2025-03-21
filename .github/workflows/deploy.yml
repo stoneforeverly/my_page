@@ -41,14 +41,14 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest
 
-  # 部署部分保持不变
+  # 部署部分修改
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v3
-        
+
       - name: 将docker-compose.yml复制到EC2
         uses: appleboy/scp-action@master
         with:
@@ -57,31 +57,52 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "docker-compose.yml"
           target: "~/my-page"
+
+      - name: 创建部署脚本
+        run: |
+          cat > deploy.sh << 'EOF'
+          #!/bin/bash
+          # 登录到DockerHub
+          echo $1 | docker login -u $2 --password-stdin
           
-      - name: 部署到EC2
+          # 拉取最新镜像
+          docker pull $2/my-page-frontend:latest
+          docker pull $2/my-page-backend:latest
+          
+          # 确保目录存在
+          mkdir -p ~/my-page
+          
+          # 修改docker-compose.yml中的镜像引用
+          cd ~/my-page
+          sed -i "s|build: ./my_page_frontend|image: $2/my-page-frontend:latest|g" docker-compose.yml
+          sed -i "s|build: ./my_page_backend|image: $2/my-page-backend:latest|g" docker-compose.yml
+          
+          # 停止并删除旧容器（如果存在）
+          docker-compose down || true
+          
+          # 启动容器
+          docker-compose up -d
+          EOF
+          chmod +x deploy.sh
+
+      - name: 将部署脚本复制到EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy.sh"
+          target: "~"
+
+      - name: 在EC2上执行部署脚本
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 登录到DockerHub
-            echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            # 安装libcrypt.so.1（如果需要）
+            sudo apt-get update && sudo apt-get install -y libxcrypt-compat || true
             
-            # 拉取最新镜像
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-page-frontend:latest
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest
-            
-            # 确保目录存在
-            mkdir -p ~/my-page
-            
-            # 修改docker-compose.yml中的镜像引用
-            cd ~/my-page
-            sed -i "s|build: ./my_page_frontend|image: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-frontend:latest|g" docker-compose.yml
-            sed -i "s|build: ./my_page_backend|image: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest|g" docker-compose.yml
-            
-            # 停止并删除旧容器（如果存在）
-            docker-compose down || true
-            
-            # 启动容器
-            docker-compose up -d
+            # 执行部署脚本
+            bash ~/deploy.sh "${{ secrets.DOCKERHUB_TOKEN }}" "${{ secrets.DOCKERHUB_USERNAME }}"
