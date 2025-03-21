@@ -76,7 +76,7 @@ jobs:
             mkdir -p ~/my-page
             
             # 修改docker-compose.yml中的镜像引用
-            cd ~/my-blog
+            cd ~/my-page
             sed -i "s|build: ./my_page_frontend|image: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-frontend:latest|g" docker-compose.yml
             sed -i "s|build: ./my_page_backend|image: ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest|g" docker-compose.yml
             
