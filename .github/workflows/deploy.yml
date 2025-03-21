@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "docker-compose.yml"
-          target: "~/my-blog"
+          target: "~/my-page"
           
       - name: 部署到EC2
         uses: appleboy/ssh-action@master
@@ -73,7 +73,7 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-page-backend:latest
             
             # 确保目录存在
-            mkdir -p ~/my-blog
+            mkdir -p ~/my-page
             
             # 修改docker-compose.yml中的镜像引用
             cd ~/my-blog
