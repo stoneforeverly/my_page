@@ -1,5 +1,5 @@
 # 使用Python作为基础镜像
-FROM python:3.7-slim
+FROM python:3.7-buster
 
 # 设置工作目录
 WORKDIR /app
@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \
     libssl-dev \
+    libcrypt-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
