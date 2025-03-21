@@ -6,6 +6,8 @@ RUN apk add --no-cache \
     libcrypto1.1 \
     openssl-dev
 
+RUN apt-get update && apt-get install -y libssl-dev
+
 # 设置工作目录
 WORKDIR /app
 
