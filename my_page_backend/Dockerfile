@@ -1,12 +1,10 @@
 # 使用Python作为基础镜像
-FROM python:3.7-alpine
+FROM python:3.13.0
 
 # 安装依赖
 RUN apk add --no-cache \
     libcrypto1.1 \
     openssl-dev
-
-RUN apt-get update && apt-get install -y libssl-dev
 
 # 设置工作目录
 WORKDIR /app
