@@ -1,5 +1,11 @@
 # 使用Python作为基础镜像
-FROM python:3.9-slim
+FROM python:3.7-slim
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    libcrypt1 \          # 安装 libcrypt.so.1 \
+    libssl-dev \         # 可选:SSL 相关库 \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app
