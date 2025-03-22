@@ -68,10 +68,6 @@ jobs:
           docker pull $2/my-page-frontend:latest
           docker pull $2/my-page-backend:latest
           
-          # 确保目录存在
-          mkdir -p ~/my-page-backend
-          mkdir -p ~/my-page-frontend
-          
           # 修改后端docker-compose.yml中的镜像引用
           cd ~/my-page-backend
           sed -i "s|build: .|image: $2/my-page-backend:latest|g" docker-compose.yml
