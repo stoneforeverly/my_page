@@ -4,27 +4,21 @@ from pymongo import MongoClient
 from bson import ObjectId
 import json
 import traceback
+import logging
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS以允许前端访问
 
+# 配置日志记录
+logging.basicConfig(filename='my_page_backend.log', level=logging.INFO)
+
 # 连接MongoDB - 添加错误处理和认证
 try:
     # 使用认证连接MongoDB
-    # 方法1：使用URI字符串方式连接（推荐）
     client = MongoClient('mongodb://localhost:27017/', authSource='admin')
-    
-    # 如果上面的方式不行，可以尝试以下方式：
-    # 方法2：使用用户名和密码参数
-    # client = MongoClient('mongodb://localhost:27017/', username='admin', password='password', authSource='admin')
-    
-    # 方法3：如果您知道确切的用户名和密码，可以直接使用
-    # client = MongoClient('mongodb://username:password@localhost:27017/admin')
-    
     db = client['blog_db']
     posts_collection = db['posts']
     about_collection = db['about']  # 添加about集合
-    # 测试连接
     client.server_info()
     print("MongoDB连接成功")
 except Exception as e:
@@ -45,9 +39,10 @@ app.json_encoder = JSONEncoder
 def get_posts():
     try:
         posts = list(posts_collection.find())
+        logging.info("获取所有博客文章成功")
         return jsonify(posts)
     except Exception as e:
-        print(f"获取文章列表错误: {e}")
+        logging.error(f"获取文章列表错误: {e}")
         traceback.print_exc()
         return jsonify({"error": f"获取文章列表失败: {str(e)}"}), 500
 
