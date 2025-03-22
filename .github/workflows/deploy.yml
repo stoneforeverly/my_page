@@ -69,12 +69,11 @@ jobs:
           docker pull $2/my-page-backend:latest
           
           # 确保目录存在
-          mkdir -p ~/my-page
+          mkdir -p ~/my-page-backend
           
-          # 修改docker-compose.yml中的镜像引用
-          cd ~/my-page
-          sed -i "s|build: ./my_page_frontend|image: $2/my-page-frontend:latest|g" docker-compose.yml
-          sed -i "s|build: ./my_page_backend|image: $2/my-page-backend:latest|g" docker-compose.yml
+          # 修改后端docker-compose.yml中的镜像引用
+          cd ~/my-page-backend
+          sed -i "s|build: .|image: $2/my-page-backend:latest|g" docker-compose.yml
           
           # 停止并删除旧容器（如果存在）
           docker-compose down || true
@@ -86,7 +85,7 @@ jobs:
       # 复制文件到EC2
       - name: 复制文件到EC2
         run: |
-          scp -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
+          scp -o StrictHostKeyChecking=no my_page_backend/docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page-backend/
           scp -o StrictHostKeyChecking=no deploy_remote.sh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
 
       # 执行远程部署命令
