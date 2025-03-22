@@ -1,0 +1,27 @@
+name: 使用Docker Compose部署博客应用
+
+on:
+  push:
+    branches: [ main ]  # 当推送到main分支时触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 设置SSH密钥文件
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 复制文件到EC2
+        run: |
+          scp -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
+
+      - name: 执行远程部署命令
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "cd ~/my-page && docker-compose down && docker-compose up -d"
