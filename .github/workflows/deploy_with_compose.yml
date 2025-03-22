@@ -5,12 +5,27 @@ on:
     branches: [ main ]  # 当推送到main分支时触发
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v3
 
+      - name: 登录到DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 构建并推送镜像
+        run: |
+          docker-compose -f docker-compose.yml build
+          docker-compose -f docker-compose.yml push
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
       - name: 设置SSH密钥文件
         run: |
           mkdir -p ~/.ssh
@@ -18,12 +33,10 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 复制文件到EC2
+      - name: 复制docker-compose文件到EC2
         run: |
-          scp -o StrictHostKeyChecking=no -r my_page_frontend ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
-          scp -o StrictHostKeyChecking=no -r my_page_backend ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
           scp -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page/
 
       - name: 执行远程部署命令
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "cd ~/my-page && docker-compose down && docker-compose up -d"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "cd ~/my-page && docker-compose pull && docker-compose up -d"
