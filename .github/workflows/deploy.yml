@@ -70,16 +70,19 @@ jobs:
           
           # 确保目录存在
           mkdir -p ~/my-page-backend
+          mkdir -p ~/my-page-frontend
           
           # 修改后端docker-compose.yml中的镜像引用
           cd ~/my-page-backend
           sed -i "s|build: .|image: $2/my-page-backend:latest|g" docker-compose.yml
           
-          # 停止并删除旧容器（如果存在）
+          # 启动后端容器
           docker-compose down || true
-          
-          # 启动容器
           docker-compose up -d
+          
+          # 启动前端容器
+          cd ~/my-page-frontend
+          docker run -d -p 80:80 $2/my-page-frontend:latest
           EOF
 
       # 复制文件到EC2
