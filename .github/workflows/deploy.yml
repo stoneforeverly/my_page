@@ -85,6 +85,7 @@ jobs:
       # 复制文件到EC2
       - name: 复制文件到EC2
         run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p ~/my-page-backend"
           scp -o StrictHostKeyChecking=no my_page_backend/docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/my-page-backend/
           scp -o StrictHostKeyChecking=no deploy_remote.sh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
 
