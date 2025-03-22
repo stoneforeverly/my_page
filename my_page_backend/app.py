@@ -15,7 +15,7 @@ logging.basicConfig(filename='my_page_backend.log', level=logging.INFO)
 # 连接MongoDB - 添加错误处理和认证
 try:
     # 使用认证连接MongoDB
-    client = MongoClient('mongodb://localhost:27017/', authSource='admin')
+    client = MongoClient('mongodb://3.107.245.52:27017/', authSource='admin')
     db = client['blog_db']
     posts_collection = db['posts']
     about_collection = db['about']  # 添加about集合
