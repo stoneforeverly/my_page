@@ -78,7 +78,7 @@ jobs:
           
           # 启动前端容器
           cd ~/my-page-frontend
-          docker run -d -p 80:80 $2/my-page-frontend:latest
+          docker run -d -p 80:80 --env-file .env $2/my-page-frontend:latest
           EOF
 
       # 复制文件到EC2
